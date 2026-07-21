@@ -43,14 +43,6 @@ class GameResult:
     guesses: list[tuple[str, list[int]]]
     attempts: list[dict[str, str | None]]
 
-    @property
-    def invalid_count(self) -> int:
-        count = 0
-        for attempt in self.attempts:
-            if attempt["error"]:
-                count += 1
-        return count
-
 def play_game(game: Game, model_name: str, prompt_fn) -> GameResult:
     attempts = []
     for turn in range(game.MAX_GUESSES):
