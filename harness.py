@@ -1,10 +1,17 @@
+import json
 import random
+from pathlib import Path
+from dataclasses import asdict
+from datetime import datetime
 
 from prompts import PROMPTS
 from scorers import SCORERS
 from words import load_guesses, load_answers
 from engine import Game
 from agent import play_game
+
+RUN_DIR = Path(__file__).parent / "runs"
+RUN_DIR.mkdir(exist_ok=True)
 
 def run_eval(config: dict) -> dict:
     model_name = config["model_name"]
@@ -22,7 +29,7 @@ def run_eval(config: dict) -> dict:
         records.append({
             "answer": answer,
             "scores": {name: fn(result) for name, fn in SCORERS.items()},
-            "result": result,
+            "result": asdict(result),
         })
 
     return {
@@ -49,8 +56,16 @@ def aggregate(records: list[dict]) -> dict:
         "avg_repeats_per_game": avg_repeats_per_game,
     }
 
+def save_run(data: dict) -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = RUN_DIR / f"{timestamp}.json"
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    return path
+
 if __name__ == "__main__":
     config = {"model_name": "qwen2.5:3b", "prompt_name": "v1", "n": 5, "seed": 42}
     data = run_eval(config)
+    path = save_run(data)
+    print(path)
     print(data["summary"])
     print(data["records"])
