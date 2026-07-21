@@ -1,6 +1,5 @@
 import httpx
 import random
-from pathlib import Path
 
 from engine import Game
 from dataclasses import dataclass
@@ -26,7 +25,7 @@ def call_llm(model_name: str, prompt: str) -> str:
 def parse_guess(raw: str) -> str | None:
     words = raw.split()
     extracted = []
-    for i, word in enumerate(words):
+    for word in words:
         cleaned = word.rstrip(".!'").upper()
         if len(cleaned) == 5 and cleaned.isalpha():
             extracted.append(cleaned)
