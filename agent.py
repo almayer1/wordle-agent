@@ -5,6 +5,7 @@ from pathlib import Path
 from engine import Game
 from dataclasses import dataclass
 from words import load_answers, load_guesses, pick_answer
+from prompts import PROMPTS
 
 """
 stateless llm calls, better for wordle
@@ -21,30 +22,6 @@ def call_llm(model_name: str, prompt: str) -> str:
     response.raise_for_status()
     data = response.json()
     return data["response"]
-
-def convert_symbolic(history: list[tuple[str, list[int]]]) -> str:
-    result = "STATE: "
-    for item in history:
-        guess = item[0]
-        score = item[1]
-        result += guess + " -> "
-        for num in score:
-            if num == 0:
-                result += "⬛"
-            elif num == 1:
-                result += "🟨"
-            elif num == 2:
-                result += "🟩"
-        result += ", "
-    result += "\n"
-    return result
-
-def build_prompt(history: list[tuple[str, list[int]]]) -> str:
-    task = "TASK: You are playing wordle, your goal is to guess the hidden answer\n"
-    rules = "RULES: You can only guess 5 letter words. For every guess you make you will get a result. Results are structured as symbols: GUESS -> ⬛⬛🟨🟩⬛. ⬛: letter is not contained in answer, 🟨: letter is in answer but not in the correct position, 🟩: letter is in correct position\n"
-    state = convert_symbolic(history)
-    output_format = "OUTPUT FORMAT: Output only your next guess."
-    return task + rules + state + output_format
 
 def parse_guess(raw: str) -> str | None:
     words = raw.split()
@@ -74,14 +51,14 @@ class GameResult:
                 count += 1
         return count
 
-def play_game(game: Game, model_name: str = DEFAULT_MODEL) -> GameResult:
+def play_game(game: Game, model_name: str, prompt_fn) -> GameResult:
     attempts = []
     for turn in range(game.MAX_GUESSES):
         if game.is_won:
             break
         error = None
 
-        prompt = build_prompt(game.guesses)
+        prompt = prompt_fn(game.guesses)
         response = call_llm(model_name, prompt)
         guess = parse_guess(response)
 
@@ -100,5 +77,5 @@ if __name__ == "__main__":
     answers = load_answers()
     guesses = load_guesses()
     game = Game(pick_answer(answers, random.Random(42)), guesses)
-    result = play_game(game)
+    result = play_game(game, model_name=DEFAULT_MODEL, prompt_fn = PROMPTS["v1"])
     print(result)
